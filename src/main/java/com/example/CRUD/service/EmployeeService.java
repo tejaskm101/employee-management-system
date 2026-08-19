@@ -1,11 +1,13 @@
 package com.example.CRUD.service;
 
+import com.example.CRUD.dto.EmployeeRequestDTO;
+import com.example.CRUD.dto.EmployeeResponseDTO;
 import com.example.CRUD.entity.Employee;
 import com.example.CRUD.repository.EmployeeRepository;
 import org.springframework.stereotype.Service;
+import com.example.CRUD.exception.EmployeeNotFoundException;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class EmployeeService {
@@ -16,28 +18,45 @@ public class EmployeeService {
         this.employeeRepository = employeeRepository;
     }
 
-    public Employee createEmployee(Employee employee) {
-        return employeeRepository.save(employee);
+    public EmployeeResponseDTO createEmployee(EmployeeRequestDTO request) {
+        Employee employee = new Employee();
+
+        employee.setFirstName(request.getFirstName());
+        employee.setLastName(request.getLastName());
+        employee.setEmail(request.getEmail());
+        employee.setDepartment(request.getDepartment());
+
+        Employee savedEmployee = employeeRepository.save(employee);
+
+        return convertToResponseDTO(savedEmployee);
     }
 
-    public List<Employee> getAllEmployees() {
-        return employeeRepository.findAll();
+    public List<EmployeeResponseDTO> getAllEmployees() {
+        return employeeRepository.findAll()
+                .stream()
+                .map(this::convertToResponseDTO)
+                .toList();
     }
 
-    public Optional<Employee> getEmployeeById(Long id) {
-        return employeeRepository.findById(id);
-    }
-
-    public Employee updateEmployee(Long id, Employee employeeDetails) {
+    public EmployeeResponseDTO getEmployeeById(Long id) {
         Employee employee = employeeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+                .orElseThrow(() -> new EmployeeNotFoundException("Employee not found with id: " + id));
 
-        employee.setFirstName(employeeDetails.getFirstName());
-        employee.setLastName(employeeDetails.getLastName());
-        employee.setEmail(employeeDetails.getEmail());
-        employee.setDepartment(employeeDetails.getDepartment());
+        return convertToResponseDTO(employee);
+    }
 
-        return employeeRepository.save(employee);
+    public EmployeeResponseDTO updateEmployee(Long id, EmployeeRequestDTO request) {
+        Employee employee = employeeRepository.findById(id)
+                .orElseThrow(() -> new EmployeeNotFoundException("Employee not found with id: " + id));
+
+        employee.setFirstName(request.getFirstName());
+        employee.setLastName(request.getLastName());
+        employee.setEmail(request.getEmail());
+        employee.setDepartment(request.getDepartment());
+
+        Employee updatedEmployee = employeeRepository.save(employee);
+
+        return convertToResponseDTO(updatedEmployee);
     }
 
     public void deleteEmployee(Long id) {
@@ -46,5 +65,15 @@ public class EmployeeService {
         }
 
         employeeRepository.deleteById(id);
+    }
+
+    private EmployeeResponseDTO convertToResponseDTO(Employee employee) {
+        return new EmployeeResponseDTO(
+                employee.getId(),
+                employee.getFirstName(),
+                employee.getLastName(),
+                employee.getEmail(),
+                employee.getDepartment()
+        );
     }
 }
